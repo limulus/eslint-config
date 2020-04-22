@@ -1,11 +1,14 @@
 module.exports = {
-  extends: [ 'standard' ],
+  extends: [
+    'standard-with-typescript',
+    'plugin:@typescript-eslint/recommended'
+  ],
   ignorePatterns: [ 'node_modules/', 'built/' ],
   env: { 'jest': true },
   parser: '@typescript-eslint/parser',
   plugins: [
     'eslint-plugin-standard',
-    '@typescript-eslint/eslint-plugin'
+    '@typescript-eslint/eslint-plugin',
   ],
   rules: {
     'arrow-parens': [ 'error', 'always' ],
@@ -16,7 +19,5 @@ module.exports = {
       exports: 'always-multiline',
       functions: 'never'
     }],
-    'no-unused-vars': 'off',
-    '@typescript-eslint/no-unused-vars': 'error'
   }
 }
