@@ -3,7 +3,7 @@ module.exports = {
     'standard-with-typescript',
     'plugin:@typescript-eslint/recommended'
   ],
-  ignorePatterns: [ 'node_modules/', 'built/' ],
+  ignorePatterns: [ 'node_modules/', 'dist/' ],
   env: { 'jest': true },
   parser: '@typescript-eslint/parser',
   plugins: [
