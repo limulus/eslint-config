@@ -4,7 +4,11 @@
   "description": "A shared ESLint configuration",
   "main": "index.js",
   "repository": "https://github.com/limulus/eslint-config.git",
-  "author": "Eric McCarthy <eric@limulus.net>",
+  "author": {
+    "name": "Eric McCarthy",
+    "email": "eric@limulus.net",
+    "url": "https://www.limulus.net/"
+  },
   "license": "MIT",
   "files": [
     "index.js"
