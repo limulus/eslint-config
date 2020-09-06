@@ -1,6 +1,6 @@
 {
   "name": "@limulus/eslint-config",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "A shared ESLint configuration",
   "main": "index.js",
   "repository": "https://github.com/limulus/eslint-config.git",
