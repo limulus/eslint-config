@@ -19,5 +19,6 @@ module.exports = {
       exports: 'always-multiline',
       functions: 'never'
     }],
+    "@typescript-eslint/no-implicit-any-catch": ["error"],
   }
 }
