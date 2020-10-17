@@ -3,10 +3,7 @@
 
 name: Publish
 
-on:
-  push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+**"
+on: push
   
 jobs:
   publish:
@@ -16,9 +13,8 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
-          registry-url: https://npm.pkg.github.com/
       - run: npm ci
       - run: npm test
-      - run: npm publish
+      - run: npx semantic-release
         env:
-          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
