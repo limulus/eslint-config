@@ -11,10 +11,10 @@
   },
   "license": "MIT",
   "files": [
-    "index.js"
+    "index.js",
+    "prettier.js"
   ],
   "scripts": {
-    "postversion": "git push && git push --tags",
     "test": "echo 'No tests, just pass.'",
     "prepare": "is-ci || husky install"
   },
@@ -22,25 +22,21 @@
     "access": "public"
   },
   "dependencies": {
-    "@typescript-eslint/eslint-plugin": "^4.0.1",
-    "@typescript-eslint/parser": "^4.0.1",
-    "eslint-config-standard-with-typescript": "^19.0.1",
-    "eslint-plugin-import": "^2.22.0",
-    "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-promise": "^4.2.1",
-    "eslint-plugin-standard": "^4.0.1"
+    "eslint-config-universe": "^11.0.0-beta.0"
   },
   "peerDependencies": {
-    "eslint": ">=7",
+    "eslint": ">=8",
+    "prettier": ">=2",
     "typescript": ">=4"
   },
   "devDependencies": {
-    "@commitlint/cli": "^11.0.0",
-    "@commitlint/config-conventional": "^11.0.0",
-    "eslint": "^7.8.1",
+    "@commitlint/cli": "^16.2.3",
+    "@commitlint/config-conventional": "^16.2.1",
+    "eslint": "^8.12.0",
     "husky": "^7.0.0",
     "is-ci": "^3.0.1",
-    "semantic-release": "^17.2.1",
-    "typescript": "^4.0.2"
+    "prettier": "^2.6.2",
+    "semantic-release": "^19.0.2",
+    "typescript": "^4.6.3"
   }
 }
