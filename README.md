@@ -6,18 +6,22 @@ Feel free to use for your own projects, but it is entirely subject to my own whi
 
 ## Set Up
 
-Add a `.eslintrc.js`:
+Add an `eslint.config.js`:
 
 ```js
-module.exports = {
-  "extends": ["@limulus"],
-  "overrides": [
-    {
-      "files": ["*.ts", "*.tsx", "*.d.ts"],
-      "parserOptions": { "project": "./tsconfig.json" }
+import config from '@limulus/eslint-config'
+
+export default [
+  ...config,
+  {
+    files: ['**/*.ts', '**/*.tsx', '**/*.d.ts'],
+    languageOptions: {
+      parserOptions: {
+        project: './tsconfig.json'
+      }
     }
-  ]
-}
+  }
+]
 ```
 
 Add a `prettier.config.js`:
