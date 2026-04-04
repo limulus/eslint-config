@@ -14,6 +14,7 @@ module.exports = defineConfig([
     },
     rules: {
       'no-nested-ternary': 'error',
+      'no-void': ['warn', { allowAsStatement: true }],
     },
   },
 ])
