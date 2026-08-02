@@ -22,8 +22,8 @@
     "access": "public"
   },
   "dependencies": {
-    "eslint-config-universe": "^15.0.3",
-    "globals": "^16.2.0"
+    "eslint-config-universe": "^16.0.0",
+    "globals": "^17.9.0"
   },
   "peerDependencies": {
     "eslint": ">=9",
