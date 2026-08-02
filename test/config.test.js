@@ -1,7 +1,7 @@
-const assert = require('node:assert/strict')
-const { describe, it } = require('node:test')
+import assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
 
-const { FIXTURES_DIR, lintFixture } = require('./helpers.js')
+import { FIXTURES_DIR, lintFixture } from './helpers.js'
 
 describe('lint behavior', () => {
   it('reports the rules this package adds on top of universe', async () => {

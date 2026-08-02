@@ -10,6 +10,15 @@
     "url": "https://www.limulus.net/"
   },
   "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./index.js"
+    },
+    "./prettier": {
+      "import": "./prettier.js"
+    }
+  },
   "files": [
     "index.js",
     "prettier.js"
@@ -26,14 +35,20 @@
     "globals": "^17.9.0"
   },
   "peerDependencies": {
-    "eslint": ">=9",
+    "eslint": ">=10",
+    "eslint_d": ">=15",
     "prettier": ">=3",
     "typescript": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "eslint_d": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
-    "eslint": "^9.27.0",
+    "eslint": "^10.8.0",
     "husky": "^9.1.7",
     "is-ci": "^4.1.0",
     "prettier": "^3.5.3",

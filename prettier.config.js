@@ -1,3 +1,5 @@
-module.exports = {
-  ...require('./prettier.js'),
+import config from './prettier.js'
+
+export default {
+  ...config,
 }

@@ -1,14 +1,16 @@
-const path = require('node:path')
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const { ESLint } = require('eslint')
+import { ESLint } from 'eslint'
 
-const config = require('../index.js')
+import config from '../index.js'
 
-const FIXTURES_DIR = path.join(__dirname, 'fixtures')
+const TEST_DIR = path.dirname(fileURLToPath(import.meta.url))
+export const FIXTURES_DIR = path.join(TEST_DIR, 'fixtures')
 
-function createESLint(overrides = []) {
+export function createESLint(overrides = []) {
   return new ESLint({
-    cwd: __dirname,
+    cwd: TEST_DIR,
     overrideConfigFile: true,
     overrideConfig: [
       ...config,
@@ -21,10 +23,8 @@ function createESLint(overrides = []) {
 }
 
 // Lints a single fixture and returns the set of rule IDs that reported against it.
-async function lintFixture(fixture, overrides = []) {
+export async function lintFixture(fixture, overrides = []) {
   const eslint = createESLint(overrides)
   const [result] = await eslint.lintFiles([path.join(FIXTURES_DIR, fixture)])
   return new Set(result.messages.map((message) => message.ruleId))
 }
-
-module.exports = { FIXTURES_DIR, createESLint, lintFixture }

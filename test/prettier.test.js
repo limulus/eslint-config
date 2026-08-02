@@ -1,12 +1,13 @@
-const assert = require('node:assert/strict')
-const path = require('node:path')
-const { describe, it } = require('node:test')
+import assert from 'node:assert/strict'
+import path from 'node:path'
+import { describe, it } from 'node:test'
+import { fileURLToPath } from 'node:url'
 
-const prettier = require('prettier')
+import prettier from 'prettier'
 
-const ROOT = path.join(__dirname, '..')
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-// Options are resolved through prettier.config.js rather than by requiring ../prettier.js
+// Options are resolved through prettier.config.js rather than by importing ../prettier.js
 // directly. That config only spreads ours, so this exercises the same overrides merge a
 // consumer gets -- which is the only way the `*.md` glob is actually proven to match.
 const longestLine = (source) => Math.max(...source.split('\n').map((line) => line.length))

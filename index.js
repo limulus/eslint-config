@@ -1,8 +1,8 @@
-const { SourceCode } = require('eslint')
-const { defineConfig } = require('eslint/config')
-const globals = require('globals')
-const webConfig = require('eslint-config-universe/flat/web')
-const typescriptAnalysisConfig = require('eslint-config-universe/flat/shared/typescript-analysis')
+import { SourceCode } from 'eslint'
+import typescriptAnalysisConfig from 'eslint-config-universe/flat/shared/typescript-analysis.js'
+import webConfig from 'eslint-config-universe/flat/web.js'
+import { defineConfig } from 'eslint/config'
+import globals from 'globals'
 
 // TEMPORARY: delete once eslint-plugin-import ships a release newer than 2.32.0.
 //
@@ -22,7 +22,7 @@ if (typeof SourceCode.prototype.getTokenOrCommentAfter !== 'function') {
   }
 }
 
-module.exports = defineConfig([
+export default defineConfig([
   ...webConfig,
   ...typescriptAnalysisConfig,
   {
