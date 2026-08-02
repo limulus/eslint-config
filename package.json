@@ -19,10 +19,19 @@
       "import": "./prettier.js"
     }
   },
+  "bin": {
+    "limulus-format": "./dist/bin/cli.js"
+  },
   "files": [
     "index.js",
-    "prettier.js"
+    "prettier.js",
+    "dist",
+    "src",
+    "!**/*.test.ts"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json --outDir dist",
     "clean": "del-cli *.tsbuildinfo coverage dist",

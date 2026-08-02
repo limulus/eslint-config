@@ -15,10 +15,10 @@ export interface FormatDeps {
   writeFile: (file: string, contents: string) => void
 }
 
-export interface FormatResult {
-  outcome: 'formatted' | 'unchanged' | 'failed'
-  message?: string
-}
+/** Failure always carries a reason, so callers never have to invent one. */
+export type FormatResult =
+  | { outcome: 'formatted' | 'unchanged' }
+  | { outcome: 'failed'; message: string }
 
 /** The subset of ESLint's JSON report this cares about. */
 interface ESLintReport {

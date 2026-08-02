@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatFile, type FormatDeps } from './format.ts'
+import { formatFile, type FormatDeps, type FormatResult } from './format.ts'
 
 interface Invocation {
   command: string
@@ -103,7 +103,7 @@ describe('formatFile', () => {
   it('reports failure when the eslint binary cannot be spawned', () => {
     const d = deps({ eslint_d: { status: -1, failed: true } })
 
-    const result = formatFile('src/a.ts', d)
+    const result = formatFile('src/a.ts', d) as Extract<FormatResult, { outcome: 'failed' }>
 
     expect(result.outcome).toBe('failed')
     expect(result.message).toMatch(/eslint_d/)
