@@ -54,7 +54,10 @@ export function formatFile(file: string, deps: FormatDeps): FormatResult {
   try {
     reports = JSON.parse(result.stdout) as ESLintReport[]
   } catch {
-    return { outcome: 'failed', message: `${command} produced unreadable output` }
+    // ESLint ran but produced no report — it bails out at rule-load time with a plain-text
+    // message when a file matches type-aware rules with no parserOptions to satisfy them.
+    // Different mechanism from a parse error below, same conclusion: hand it to Prettier.
+    return runPrettier(file, deps)
   }
 
   const [report] = reports

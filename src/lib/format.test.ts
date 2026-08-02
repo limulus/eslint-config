@@ -109,12 +109,28 @@ describe('formatFile', () => {
     expect(result.message).toMatch(/eslint_d/)
   })
 
-  it('reports failure when eslint emits unparseable json', () => {
-    const d = deps({ eslint_d: { status: 0, stdout: 'Oops! Something went wrong' } })
+  it('falls back to prettier when eslint bails out without a json report', () => {
+    // ESLint crashes at rule-load time -- exit 2, a human-readable message on stderr, no
+    // JSON at all -- when a file matches type-aware rules but has no parserOptions for it.
+    // Different mechanism from a parse error, same conclusion: eslint cannot format this.
+    const d = deps({
+      eslint_d: { status: 2, stdout: 'Oops! Something went wrong :(' },
+      prettier: { status: 0 },
+    })
 
-    const result = formatFile('src/a.ts', d)
+    const result = formatFile('stray.ts', d)
 
-    expect(result.outcome).toBe('failed')
+    expect(result.outcome).toBe('formatted')
+    expect(d.calls.map((call) => call.command)).toEqual(['eslint_d', 'prettier'])
+  })
+
+  it('reports failure when eslint bails out and prettier cannot save it either', () => {
+    const d = deps({
+      eslint_d: { status: 2, stdout: 'Oops!' },
+      prettier: { status: 2, failed: true },
+    })
+
+    expect(formatFile('stray.ts', d).outcome).toBe('failed')
   })
 
   it('reports failure when prettier itself fails', () => {
