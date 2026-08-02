@@ -3,7 +3,30 @@ name: Publish
 on: push
 
 jobs:
+  # Job name is the branch-protection required-check context, so keep it stable
+  # (no Node version baked in) — a runner bump shouldn't orphan the check.
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run verify
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: coverage
+          path: coverage/
+      # After the coverage upload: the pack's prepack → prebuild → clean deletes coverage/
+      - run: npm run test:pack
+
   publish:
+    name: publish package if needed
+    needs: verify
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -15,8 +38,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          cache: 'npm'
       - run: npm ci
-      - run: npm test
       - run: npx --yes semantic-release@25
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
