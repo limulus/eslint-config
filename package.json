@@ -15,7 +15,7 @@
     "prettier.js"
   ],
   "scripts": {
-    "test": "echo 'No tests, just pass.'",
+    "test": "node --test test/*.test.js",
     "prepare": "husky"
   },
   "publishConfig": {
