@@ -24,8 +24,17 @@
     "prettier.js"
   ],
   "scripts": {
-    "test": "node --test test/*.test.js",
-    "prepare": "husky"
+    "build": "tsc -p tsconfig.build.json --outDir dist",
+    "clean": "del-cli *.tsbuildinfo coverage dist",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prebuild": "npm run clean",
+    "prepack": "npm run build",
+    "prepare": "husky",
+    "test": "vitest run --coverage",
+    "test:pack": "vitest run -c vitest.pack.config.ts",
+    "tscc": "tsc --noEmit",
+    "verify": "npm run format:check && npm run test && npm run tscc"
   },
   "publishConfig": {
     "access": "public"
@@ -48,10 +57,15 @@
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
+    "@types/node": "^22.20.1",
+    "@vitest/coverage-v8": "^4.1.10",
+    "del-cli": "^6.0.0",
     "eslint": "^10.8.0",
     "husky": "^9.1.7",
     "is-ci": "^4.1.0",
     "prettier": "^3.5.3",
-    "typescript": "^5.8.3"
+    "tslib": "^2.8.1",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.10"
   }
 }

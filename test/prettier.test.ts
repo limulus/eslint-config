@@ -1,33 +1,27 @@
-import assert from 'node:assert/strict'
 import path from 'node:path'
-import { describe, it } from 'node:test'
 import { fileURLToPath } from 'node:url'
 
 import prettier from 'prettier'
+import { describe, expect, it } from 'vitest'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 // Options are resolved through prettier.config.js rather than by importing ../prettier.js
 // directly. That config only spreads ours, so this exercises the same overrides merge a
 // consumer gets -- which is the only way the `*.md` glob is actually proven to match.
-const longestLine = (source) => Math.max(...source.split('\n').map((line) => line.length))
+const longestLine = (source: string): number =>
+  Math.max(...source.split('\n').map((line) => line.length))
 
 describe('prettier config', () => {
   it('hard-wraps markdown prose at the print width', async () => {
     const options = await prettier.resolveConfig(path.join(ROOT, 'README.md'))
-    assert.equal(options.proseWrap, 'always')
+    expect(options?.proseWrap).toBe('always')
 
     const source = `A paragraph ${'that runs on and on '.repeat(10)}and then ends.\n`
     const formatted = await prettier.format(source, { ...options, parser: 'markdown' })
 
-    assert.ok(
-      longestLine(formatted) <= options.printWidth,
-      `expected every line within ${options.printWidth} columns, got ${longestLine(formatted)}`
-    )
-    assert.ok(
-      formatted.trim().includes('\n'),
-      'expected the paragraph to be wrapped onto multiple lines'
-    )
+    expect(longestLine(formatted)).toBeLessThanOrEqual(options?.printWidth as number)
+    expect(formatted.trim()).toContain('\n')
   })
 
   it('leaves yaml scalars alone', async () => {
@@ -40,9 +34,6 @@ describe('prettier config', () => {
     const source = `key: ${'a long scalar value '.repeat(10)}end\n`
     const formatted = await prettier.format(source, { ...options, parser: 'yaml' })
 
-    assert.ok(
-      longestLine(formatted) > options.printWidth,
-      'expected the scalar to be left over-width rather than reflowed'
-    )
+    expect(longestLine(formatted)).toBeGreaterThan(options?.printWidth as number)
   })
 })
