@@ -102,3 +102,6 @@ dist
 
 # TernJS port file
 .tern-port
+
+# Scratch consumer projects created by the integration tests
+.integration-*
