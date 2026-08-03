@@ -1,11 +1,11 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { afterAll, describe, expect, it } from 'vitest'
 
-import { installedVersion, readStream, runCommand, writeFileAt } from './io.ts'
+import { installedVersion, readStream, runCommand } from './io.ts'
 
 const REPO_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const workDir = mkdtempSync(path.join(tmpdir(), 'limulus-io-'))
@@ -70,15 +70,6 @@ describe('runCommand', () => {
 
     expect(result.failed).toBe(false)
     expect(result.stdout.trim()).toMatch(/^\d+\./)
-  })
-})
-
-describe('writeFileAt', () => {
-  it('writes contents to disk', () => {
-    const target = path.join(workDir, 'out.txt')
-    writeFileAt(target, 'written\n')
-
-    expect(readFileSync(target, 'utf8')).toBe('written\n')
   })
 })
 

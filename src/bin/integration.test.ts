@@ -98,5 +98,9 @@ describe('the eslint arm, end to end', () => {
 
     expect(result.status).toBe(0)
     expect(readFileSync(target, 'utf8')).toBe("export const value: string = 'quoted'\n")
+    // Says so, rather than leaving it to be discovered. A .ts that never gets linted is worth
+    // one line of stderr even though it is a configuration choice rather than a fault.
+    expect(result.stderr).toMatch(/could not lint/)
+    expect(result.stderr).toMatch(/requires type information/)
   })
 })

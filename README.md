@@ -44,11 +44,11 @@ The package ships a `limulus-format` bin that formats one file the way this conf
 npx limulus-format src/thing.ts
 ```
 
-It picks the tool for you. JavaScript and TypeScript go through ESLint — universe enables
-`prettier/prettier`, so ESLint already applies Prettier to them and fixes lint on the same
-pass. Everything else goes through Prettier directly. A file ESLint cannot parse, such as a
-`.ts` outside your `tsconfig.json` `include`, falls back to Prettier rather than being
-skipped.
+JavaScript and TypeScript get `eslint --fix` first — universe enables `prettier/prettier`,
+so that one pass applies Prettier and fixes lint together. Then Prettier runs over
+everything, whatever its type. On a file ESLint already handled that second pass costs about
+50ms and changes nothing; on one ESLint could not parse — a `.ts` outside your
+`tsconfig.json` `include`, say — it is what keeps the file from being silently skipped.
 
 Run `limulus-format --help` for usage. Pass a path beginning with a dash after `--`.
 

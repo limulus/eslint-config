@@ -14,7 +14,6 @@ export interface CommandDeps {
   stdinIsInteractive: boolean
   runner: () => Runner
   run: (command: string, args: readonly string[]) => RunResult
-  writeFile: (file: string, contents: string) => void
   writeOut: (message: string) => void
   writeError: (message: string) => void
 }

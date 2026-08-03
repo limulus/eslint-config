@@ -13,11 +13,9 @@ const deps = (
     string,
     { stdout?: string; stderr?: string; status: number; failed?: boolean }
   >,
-  written: string[] = [],
   calls: Invocation[] = [],
   errors: string[] = []
-): FormatDeps & { written: string[]; calls: Invocation[]; errors: string[] } => ({
-  written,
+): FormatDeps & { calls: Invocation[]; errors: string[] } => ({
   calls,
   errors,
   runner: () => 'eslint_d',
@@ -32,159 +30,106 @@ const deps = (
       failed: result.failed ?? false,
     }
   },
-  writeFile: (file, contents) => {
-    written.push(`${file}\n${contents}`)
-  },
   writeError: (message) => {
     errors.push(message)
   },
 })
 
-const eslintJson = (report: Record<string, unknown>) => JSON.stringify([report])
+const failure = (result: FormatResult) =>
+  result as Extract<FormatResult, { outcome: 'failed' }>
 
 describe('formatFile', () => {
-  it('writes eslint output back when fixes were produced', () => {
-    const d = deps({
-      eslint_d: {
-        status: 0,
-        stdout: eslintJson({ fatalErrorCount: 0, output: 'fixed source\n' }),
-      },
-    })
+  it('runs eslint --fix and then prettier for javascript and typescript', () => {
+    // Both, unconditionally. Deciding whether Prettier is needed would cost more than the ~50ms
+    // of running it: ESLint applies it as a rule anyway, so the second pass is a no-op when the
+    // first one worked and a rescue when it did not.
+    const d = deps({ eslint_d: { status: 0 }, prettier: { status: 0 } })
 
     const result = formatFile('src/a.ts', d)
-
-    expect(result.outcome).toBe('formatted')
-    expect(d.written).toEqual(['src/a.ts\nfixed source\n'])
-  })
-
-  it('leaves the file alone when eslint reports no fixes', () => {
-    const d = deps({ eslint_d: { status: 0, stdout: eslintJson({ fatalErrorCount: 0 }) } })
-
-    const result = formatFile('src/a.ts', d)
-
-    expect(result.outcome).toBe('unchanged')
-    expect(d.written).toEqual([])
-  })
-
-  it('still succeeds when lint warnings remain after fixing', () => {
-    // A file can be perfectly formatted and still carry unfixable warnings. That is not a
-    // formatting failure, so the hook must not surface it as one.
-    const d = deps({
-      eslint_d: {
-        status: 1,
-        stdout: eslintJson({ fatalErrorCount: 0, warningCount: 3, output: 'fixed\n' }),
-      },
-    })
-
-    expect(formatFile('src/a.ts', d).outcome).toBe('formatted')
-  })
-
-  it('falls back to prettier when eslint reports a parse error', () => {
-    // A .ts file outside the tsconfig include parses fatally and is otherwise skipped
-    // silently. Prettier formats it fine without type information.
-    const d = deps({
-      eslint_d: {
-        status: 1,
-        stdout: eslintJson({ fatalErrorCount: 1, messages: [{ fatal: true }] }),
-      },
-      prettier: { status: 0 },
-    })
-
-    const result = formatFile('stray.ts', d)
 
     expect(result.outcome).toBe('formatted')
     expect(d.calls.map((call) => call.command)).toEqual(['eslint_d', 'prettier'])
-    expect(d.written).toEqual([])
   })
 
-  it('routes non-eslint files straight to prettier --write', () => {
+  it('puts -- before the path so a leading dash is still a path', () => {
+    const d = deps({ eslint_d: { status: 0 }, prettier: { status: 0 } })
+
+    formatFile('-dash.ts', d)
+
+    for (const call of d.calls) {
+      expect(call.args.at(-2)).toBe('--')
+      expect(call.args.at(-1)).toBe('-dash.ts')
+    }
+  })
+
+  it('sends files eslint does not handle straight to prettier', () => {
     const d = deps({ prettier: { status: 0 } })
 
     const result = formatFile('README.md', d)
 
     expect(result.outcome).toBe('formatted')
-    expect(d.calls).toHaveLength(1)
-    expect(d.calls[0].command).toBe('prettier')
-    expect(d.calls[0].args).toContain('--write')
-    expect(d.calls[0].args).toContain('--ignore-unknown')
+    expect(d.calls.map((call) => call.command)).toEqual(['prettier'])
   })
 
-  it('reports failure when the eslint binary cannot be spawned', () => {
-    const d = deps({ eslint_d: { status: -1, failed: true } })
+  it('does not treat leftover lint problems as a failure', () => {
+    // eslint exits 1 whenever anything unfixable remains, which is most of the time. The file is
+    // still correctly formatted, and a hook that cried wolf on every write would be turned off.
+    const d = deps({ eslint_d: { status: 1 }, prettier: { status: 0 } })
 
-    const result = formatFile('src/a.ts', d) as Extract<FormatResult, { outcome: 'failed' }>
-
-    expect(result.outcome).toBe('failed')
-    expect(result.message).toMatch(/eslint_d/)
-  })
-
-  it('falls back to prettier when eslint bails out without a json report', () => {
-    // ESLint crashes at rule-load time -- exit 2, a human-readable message on stderr, no
-    // JSON at all -- when a file matches type-aware rules but has no parserOptions for it.
-    // Different mechanism from a parse error, same conclusion: eslint cannot format this.
-    const d = deps({
-      eslint_d: { status: 2, stdout: 'Oops! Something went wrong :(' },
-      prettier: { status: 0 },
-    })
-
-    const result = formatFile('stray.ts', d)
+    const result = formatFile('src/a.ts', d)
 
     expect(result.outcome).toBe('formatted')
-    expect(d.calls.map((call) => call.command)).toEqual(['eslint_d', 'prettier'])
+    expect(d.errors).toEqual([])
   })
 
-  it('says why it fell back, quoting the reason eslint gave', () => {
-    // The whole point of the fallback is that formatting still happens, which also means a
-    // consumer whose eslint config is broken outright gets silent prettier-only output forever.
-    // The reason lives in eslint's stderr, so that is what has to reach the user.
+  it('says why lint was skipped when eslint could not run at all', () => {
+    // Exit 2 is eslint failing to run rather than finding fault: a config that throws, or a
+    // plugin incompatible with the installed eslint. Prettier still formats the file, so this
+    // would otherwise be indistinguishable from success while every lint fix silently stopped.
     const d = deps({
       eslint_d: {
         status: 2,
-        stdout: 'Oops! Something went wrong :(',
         stderr: "TypeError: Error while loading rule 'react/no-did-mount-set-state'\n",
       },
       prettier: { status: 0 },
     })
 
+    const result = formatFile('src/a.ts', d)
+
+    expect(result.outcome).toBe('formatted')
+    expect(d.errors.join('')).toMatch(/eslint_d/)
+    expect(d.errors.join('')).toMatch(/Error while loading rule/)
+  })
+
+  it('still says something when eslint fails without explaining itself', () => {
+    const d = deps({ eslint_d: { status: 2 }, prettier: { status: 0 } })
+
     formatFile('src/a.ts', d)
 
-    const reported = d.errors.join('')
-    expect(reported).toMatch(/eslint_d/)
-    expect(reported).toMatch(/prettier/)
-    expect(reported).toMatch(/Error while loading rule/)
+    expect(d.errors.join('')).toMatch(/exited 2/)
   })
 
-  it('stays silent on the parse-error fallback, which is a per-file expectation', () => {
-    // A .ts outside the tsconfig include is the documented case the fallback exists for. It is
-    // not a symptom of anything being wrong, so it must not print on every write.
-    const d = deps({
-      eslint_d: { status: 1, stdout: eslintJson({ fatalErrorCount: 1 }) },
-      prettier: { status: 0 },
-    })
+  it('says so but still formats when the eslint binary is missing', () => {
+    const d = deps({ eslint_d: { status: -1, failed: true }, prettier: { status: 0 } })
 
-    formatFile('stray.ts', d)
+    const result = formatFile('src/a.ts', d)
 
-    expect(d.errors).toEqual([])
+    expect(result.outcome).toBe('formatted')
+    expect(d.errors.join('')).toMatch(/eslint_d/)
   })
 
-  it('reports failure when eslint bails out and prettier cannot save it either', () => {
-    const d = deps({
-      eslint_d: { status: 2, stdout: 'Oops!' },
-      prettier: { status: 2, failed: true },
-    })
+  it('fails only when prettier itself fails, since that means nothing was formatted', () => {
+    const d = deps({ eslint_d: { status: 0 }, prettier: { status: 2, failed: true } })
 
-    expect(formatFile('stray.ts', d).outcome).toBe('failed')
+    const result = formatFile('src/a.ts', d)
+
+    expect(result.outcome).toBe('failed')
+    expect(failure(result).message).toMatch(/prettier/)
   })
 
-  it('reports failure when prettier itself fails', () => {
-    const d = deps({ prettier: { status: 2, failed: true } })
+  it('fails when prettier reports a non-zero status', () => {
+    const d = deps({ prettier: { status: 2 } })
 
     expect(formatFile('README.md', d).outcome).toBe('failed')
-  })
-
-  it('treats an empty eslint report as nothing to do', () => {
-    const d = deps({ eslint_d: { status: 0, stdout: '[]' } })
-
-    expect(formatFile('src/a.ts', d).outcome).toBe('unchanged')
   })
 })

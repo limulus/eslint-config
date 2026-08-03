@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { selectRunner } from '../lib/eslint-runner.ts'
-import { installedVersion, readStream, runCommand, writeFileAt } from '../lib/io.ts'
+import { installedVersion, readStream, runCommand } from '../lib/io.ts'
 import { run } from './format-command.ts'
 
 const cwd = process.cwd()
@@ -11,7 +11,6 @@ process.exit(
     stdinIsInteractive: Boolean(process.stdin.isTTY),
     runner: () => selectRunner((specifier) => installedVersion(specifier, cwd)),
     run: (command, args) => runCommand(command, args, cwd),
-    writeFile: writeFileAt,
     writeOut: (message) => process.stdout.write(message),
     writeError: (message) => process.stderr.write(message),
   })

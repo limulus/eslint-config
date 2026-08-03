@@ -1,5 +1,4 @@
 import { spawnSync } from 'node:child_process'
-import { writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 
@@ -60,10 +59,6 @@ export function runCommand(
     status: result.status ?? -1,
     failed: Boolean(result.error) || result.status === null,
   }
-}
-
-export function writeFileAt(file: string, contents: string): void {
-  writeFileSync(file, contents)
 }
 
 /** Drains an async iterable of chunks into a string. */

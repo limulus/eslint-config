@@ -16,8 +16,7 @@ const deps = (overrides: Partial<CommandDeps> = {}): CommandDeps & Recorded => {
     readStdin: async () => '',
     stdinIsInteractive: false,
     runner: () => 'eslint',
-    run: () => ({ stdout: '[]', stderr: '', status: 0, failed: false }),
-    writeFile: () => {},
+    run: () => ({ stdout: '', stderr: '', status: 0, failed: false }),
     writeOut: (message: string) => out.push(message),
     writeError: (message: string) => errors.push(message),
     ...overrides,
@@ -26,14 +25,7 @@ const deps = (overrides: Partial<CommandDeps> = {}): CommandDeps & Recorded => {
 
 describe('run', () => {
   it('exits 0 after formatting a file named on the command line', async () => {
-    const d = deps({
-      run: () => ({
-        stdout: JSON.stringify([{ fatalErrorCount: 0, output: 'fixed\n' }]),
-        stderr: '',
-        status: 0,
-        failed: false,
-      }),
-    })
+    const d = deps()
 
     expect(await run(['a.ts'], d)).toBe(0)
     expect(d.errors).toEqual([])
@@ -48,11 +40,12 @@ describe('run', () => {
   })
 
   it('exits 1 and explains itself when the formatter fails', async () => {
-    const d = deps({ run: () => ({ stdout: '', stderr: '', status: -1, failed: true }) })
+    // A .md so prettier is the only thing spawned, and its failure is the only message.
+    const d = deps({ run: () => ({ stdout: '', stderr: '', status: 2, failed: true }) })
 
-    expect(await run(['a.ts'], d)).toBe(1)
+    expect(await run(['notes.md'], d)).toBe(1)
     expect(d.errors).toHaveLength(1)
-    expect(d.errors[0]).toMatch(/a\.ts/)
+    expect(d.errors[0]).toMatch(/notes\.md/)
   })
 
   it('exits 0 when the file needed no changes', async () => {

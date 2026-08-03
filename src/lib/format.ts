@@ -9,24 +9,18 @@ export interface RunResult {
   failed: boolean
 }
 
-/** The ambient effects formatFile needs. Injected so tests never spawn or touch disk. */
+/** The ambient effects formatFile needs. Injected so tests never spawn a process. */
 export interface FormatDeps {
   runner: () => Runner
   run: (command: string, args: readonly string[]) => RunResult
-  writeFile: (file: string, contents: string) => void
   writeError: (message: string) => void
 }
 
 /** Failure always carries a reason, so callers never have to invent one. */
-export type FormatResult =
-  | { outcome: 'formatted' | 'unchanged' }
-  | { outcome: 'failed'; message: string }
+export type FormatResult = { outcome: 'formatted' } | { outcome: 'failed'; message: string }
 
-/** The subset of ESLint's JSON report this cares about. */
-interface ESLintReport {
-  fatalErrorCount?: number
-  output?: string
-}
+/** eslint's exit code for "I could not run", as opposed to 1 for "I found problems". */
+const ESLINT_COULD_NOT_RUN = 2
 
 /** The first few meaningful lines of a tool's stderr — enough to diagnose, not enough to flood. */
 const excerpt = (text: string): string =>
@@ -37,59 +31,41 @@ const excerpt = (text: string): string =>
     .slice(0, 3)
     .join('\n')
 
-const runPrettier = (file: string, deps: FormatDeps): FormatResult => {
-  const result = deps.run('prettier', ['--write', '--ignore-unknown', '--', file])
-  return result.failed || result.status !== 0
-    ? { outcome: 'failed', message: `prettier exited ${result.status}` }
-    : { outcome: 'formatted' }
+/**
+ * Lints a file if it is the sort of file ESLint handles, reporting rather than failing when
+ * ESLint cannot run. Prettier is left to format it either way.
+ */
+function lint(file: string, deps: FormatDeps): void {
+  const command = deps.runner()
+  const result = deps.run(command, ['--fix', '--', file])
+
+  // Exit 1 means unfixable lint problems remain, which is the normal state of most files and
+  // says nothing about formatting. Only a failure to run at all is worth a word.
+  if (!result.failed && result.status !== ESLINT_COULD_NOT_RUN) return
+
+  const reason = result.failed
+    ? 'could not be spawned'
+    : excerpt(result.stderr) || `exited ${result.status}`
+
+  deps.writeError(
+    `limulus-format: ${command} could not lint ${file}, so it was only formatted:\n${reason}\n`
+  )
 }
 
 /**
  * Formats one file in place.
  *
- * ESLint runs with `--fix-dry-run --format json` rather than `--fix` so its verdict can be read
- * before anything is written. That is what makes the parse-error fallback possible: a `.ts`
- * outside the tsconfig `include` fails fatally and would otherwise be skipped in silence, but
- * Prettier formats it happily without type information.
+ * JavaScript and TypeScript get `eslint --fix` first, because universe enables
+ * `prettier/prettier` — so that single pass applies Prettier and fixes lint together. Prettier
+ * then runs over everything regardless. On a file ESLint already handled it is a ~50ms no-op; on
+ * one ESLint could not parse or was not configured for, it is what keeps the file from being
+ * silently skipped. Cheaper than working out which case applies, and it cannot guess wrong.
  */
 export function formatFile(file: string, deps: FormatDeps): FormatResult {
-  if (strategyFor(file) === 'prettier') return runPrettier(file, deps)
+  if (strategyFor(file) === 'eslint') lint(file, deps)
 
-  const command = deps.runner()
-  // `--` so a path beginning with a dash reaches the formatter as a path, not an option.
-  const result = deps.run(command, ['--fix-dry-run', '--format', 'json', '--', file])
-  if (result.failed) {
-    return { outcome: 'failed', message: `${command} could not be run` }
-  }
-
-  let reports: ESLintReport[]
-  try {
-    reports = JSON.parse(result.stdout) as ESLintReport[]
-  } catch {
-    // ESLint ran but produced no report: it bailed out at rule-load time with a plain-text
-    // message. Nothing here is file-specific — a plugin incompatible with the installed ESLint,
-    // or an eslint.config.js that throws, fails this way on every file alike. Falling back keeps
-    // the file formatted, but silently doing so forever would hide the lint half of this tool
-    // going dark, so the reason ESLint gave is passed through. The exit code stays 0: the file
-    // did get formatted, and a hook that fails a write over this would be worse than useless.
-    const reason = excerpt(result.stderr) || `exited ${result.status} without a report`
-    deps.writeError(
-      `limulus-format: ${command} could not lint ${file}, so prettier formatted it instead:\n` +
-        `${reason}\n`
-    )
-    return runPrettier(file, deps)
-  }
-
-  const [report] = reports
-  if (!report) return { outcome: 'unchanged' }
-
-  // A fatal error means ESLint could not parse the file at all, so it produced no fix.
-  if (report.fatalErrorCount) return runPrettier(file, deps)
-
-  // A non-zero status with no fatal error is just unfixable lint left over, which is not a
-  // formatting failure — the file is still correctly formatted.
-  if (report.output === undefined) return { outcome: 'unchanged' }
-
-  deps.writeFile(file, report.output)
-  return { outcome: 'formatted' }
+  const result = deps.run('prettier', ['--write', '--ignore-unknown', '--', file])
+  return result.failed || result.status !== 0
+    ? { outcome: 'failed', message: `prettier exited ${result.status}` }
+    : { outcome: 'formatted' }
 }
