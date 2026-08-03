@@ -38,7 +38,7 @@ const excerpt = (text: string): string =>
     .join('\n')
 
 const runPrettier = (file: string, deps: FormatDeps): FormatResult => {
-  const result = deps.run('prettier', ['--write', '--ignore-unknown', file])
+  const result = deps.run('prettier', ['--write', '--ignore-unknown', '--', file])
   return result.failed || result.status !== 0
     ? { outcome: 'failed', message: `prettier exited ${result.status}` }
     : { outcome: 'formatted' }
@@ -56,7 +56,8 @@ export function formatFile(file: string, deps: FormatDeps): FormatResult {
   if (strategyFor(file) === 'prettier') return runPrettier(file, deps)
 
   const command = deps.runner()
-  const result = deps.run(command, ['--fix-dry-run', '--format', 'json', file])
+  // `--` so a path beginning with a dash reaches the formatter as a path, not an option.
+  const result = deps.run(command, ['--fix-dry-run', '--format', 'json', '--', file])
   if (result.failed) {
     return { outcome: 'failed', message: `${command} could not be run` }
   }

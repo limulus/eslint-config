@@ -1,26 +1,64 @@
+import { parseArgs } from 'node:util'
+
 /** Reads the whole of stdin. Injectable so tests never touch the real process stream. */
 export type StdinReader = () => Promise<string>
+
+export const USAGE = `Usage: limulus-format [--] <file>
+       limulus-format            (reads a hook payload on stdin)
+
+Formats one file the way @limulus/eslint-config wants it. JavaScript and
+TypeScript go through ESLint, which applies Prettier as a rule and fixes lint on
+the same pass; everything else goes through Prettier directly.
+
+Given no file, it reads a Claude Code hook payload on stdin and formats the path
+at tool_input.file_path.
+
+Options:
+  -h, --help  Show this message
+`
+
+/** What the command line asked for. `stdin` means "no file named — go read the payload". */
+export type Invocation =
+  | { kind: 'file'; file: string }
+  | { kind: 'stdin' }
+  | { kind: 'help' }
+  | { kind: 'error'; message: string }
+
+/**
+ * Interprets argv.
+ *
+ * Uses node's own parser rather than reading argv[0] directly, so that `--` works: a path
+ * beginning with a dash is otherwise indistinguishable from an option, and would be silently
+ * swallowed here and then again by the formatter that gets spawned.
+ */
+export function parseInvocation(argv: readonly string[]): Invocation {
+  try {
+    const { values, positionals } = parseArgs({
+      args: [...argv],
+      options: { help: { type: 'boolean', short: 'h' } },
+      allowPositionals: true,
+    })
+
+    if (values.help) return { kind: 'help' }
+
+    const [file] = positionals
+    return file ? { kind: 'file', file } : { kind: 'stdin' }
+  } catch (error) {
+    return { kind: 'error', message: (error as Error).message }
+  }
+}
 
 interface HookPayload {
   tool_input?: { file_path?: unknown }
 }
 
 /**
- * The file to format: the first positional argument, else `tool_input.file_path` from a Claude
- * Code hook payload on stdin. Returns null when neither yields a path — the caller decides
- * whether that is an error or a no-op.
+ * The path a Claude Code hook payload names, or null when it names none.
  *
- * Argv wins outright, and stdin is not read at all in that case, so the bin stays usable as a
- * plain `limulus-format <file>` outside any hook.
+ * Every unusable shape collapses to null rather than an error: a PostToolUse hook fires on tool
+ * calls that touch no file at all, so "nothing to do" is the common case, not a fault.
  */
-export async function resolveTargetFile(
-  args: readonly string[],
-  readStdin: StdinReader
-): Promise<string | null> {
-  const [fromArgv] = args
-  if (fromArgv) return fromArgv
-
-  const raw = await readStdin()
+export function filePathFromHookPayload(raw: string): string | null {
   if (!raw.trim()) return null
 
   let payload: HookPayload

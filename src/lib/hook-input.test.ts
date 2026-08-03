@@ -1,45 +1,69 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveTargetFile } from './hook-input.ts'
+import { filePathFromHookPayload, parseInvocation } from './hook-input.ts'
 
-describe('resolveTargetFile', () => {
-  it('takes the first positional argument when present', async () => {
-    const file = await resolveTargetFile(['src/thing.ts'], async () => '')
-
-    expect(file).toBe('src/thing.ts')
-  })
-
-  it('ignores stdin entirely when an argument is given', async () => {
-    const file = await resolveTargetFile(['from-argv.ts'], async () => {
-      throw new Error('stdin should not be read')
+describe('parseInvocation', () => {
+  it('takes the first positional argument as the file', () => {
+    expect(parseInvocation(['src/thing.ts'])).toEqual({
+      kind: 'file',
+      file: 'src/thing.ts',
     })
-
-    expect(file).toBe('from-argv.ts')
   })
 
-  it('falls back to tool_input.file_path from hook JSON on stdin', async () => {
+  it('asks for stdin when no file is named', () => {
+    expect(parseInvocation([])).toEqual({ kind: 'stdin' })
+  })
+
+  it('treats a path after -- as a path, however it starts', () => {
+    // Without the separator a leading dash makes the path look like an option, both here and
+    // to the formatter this eventually spawns.
+    expect(parseInvocation(['--', '-weird-name.ts'])).toEqual({
+      kind: 'file',
+      file: '-weird-name.ts',
+    })
+  })
+
+  it('recognises --help and -h', () => {
+    expect(parseInvocation(['--help'])).toEqual({ kind: 'help' })
+    expect(parseInvocation(['-h'])).toEqual({ kind: 'help' })
+  })
+
+  it('rejects an unknown option instead of formatting a file named after it', () => {
+    const invocation = parseInvocation(['--fix-everything', 'a.ts'])
+
+    expect(invocation.kind).toBe('error')
+    expect((invocation as Extract<typeof invocation, { kind: 'error' }>).message).toMatch(
+      /fix-everything/
+    )
+  })
+})
+
+describe('filePathFromHookPayload', () => {
+  it('reads tool_input.file_path', () => {
     const payload = JSON.stringify({
       hook_event_name: 'PostToolUse',
       tool_name: 'Write',
       tool_input: { file_path: '/repo/README.md', content: '# hi' },
     })
 
-    const file = await resolveTargetFile([], async () => payload)
-
-    expect(file).toBe('/repo/README.md')
+    expect(filePathFromHookPayload(payload)).toBe('/repo/README.md')
   })
 
-  it('returns null when stdin holds JSON without a file path', async () => {
+  it('returns null for JSON without a file path', () => {
     const payload = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'ls' } })
 
-    expect(await resolveTargetFile([], async () => payload)).toBeNull()
+    expect(filePathFromHookPayload(payload)).toBeNull()
   })
 
-  it('returns null when stdin is empty', async () => {
-    expect(await resolveTargetFile([], async () => '')).toBeNull()
+  it('returns null for a non-string file path', () => {
+    expect(filePathFromHookPayload('{"tool_input":{"file_path":42}}')).toBeNull()
   })
 
-  it('returns null when stdin is not valid JSON', async () => {
-    expect(await resolveTargetFile([], async () => 'not json at all')).toBeNull()
+  it('returns null for empty input', () => {
+    expect(filePathFromHookPayload('')).toBeNull()
+  })
+
+  it('returns null for input that is not JSON', () => {
+    expect(filePathFromHookPayload('not json at all')).toBeNull()
   })
 })

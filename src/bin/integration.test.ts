@@ -36,8 +36,10 @@ afterAll(() => {
   for (const dir of [workDir, brokenDir]) rmSync(dir, { recursive: true, force: true })
 })
 
-const runBin = (target: string, cwd = workDir) =>
-  spawnSync(process.execPath, [BIN, target], { cwd, encoding: 'utf8' })
+const runBin = (target: string, cwd = workDir) => runBinArgs([target], cwd)
+
+const runBinArgs = (args: string[], cwd = workDir) =>
+  spawnSync(process.execPath, [BIN, ...args], { cwd, encoding: 'utf8' })
 
 describe('the eslint arm, end to end', () => {
   it('applies a lint fix that prettier alone could not make', () => {
@@ -55,6 +57,19 @@ describe('the eslint arm, end to end', () => {
     expect(result.status).toBe(0)
     expect(readFileSync(target, 'utf8')).toBe(
       "import path from 'node:path'\n\nconst root = path.sep\nconsole.log(root)\n"
+    )
+  })
+
+  it('formats a dash-prefixed path passed after --', () => {
+    // The separator has to survive two hops: this bin's own parser, and the formatter it
+    // spawns. Both would otherwise read the name as an option.
+    writeFileSync(path.join(workDir, '-dash.js'), 'let a = 1\nconsole.log( a )\n')
+
+    const result = runBinArgs(['--', '-dash.js'])
+
+    expect(result.status).toBe(0)
+    expect(readFileSync(path.join(workDir, '-dash.js'), 'utf8')).toBe(
+      'const a = 1\nconsole.log(a)\n'
     )
   })
 
