@@ -40,6 +40,12 @@ describe('runCommand', () => {
     expect(result.failed).toBe(false)
   })
 
+  it('captures stderr, which carries the reason a formatter bailed out', () => {
+    const result = runCommand('node', ['-e', 'process.stderr.write("why it broke")'], REPO_ROOT)
+
+    expect(result.stderr).toBe('why it broke')
+  })
+
   it('marks a command that cannot be spawned as failed', () => {
     expect(runCommand('definitely-not-a-real-binary', [], REPO_ROOT).failed).toBe(true)
   })

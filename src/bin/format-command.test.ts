@@ -8,7 +8,7 @@ const deps = (overrides: Partial<CommandDeps> = {}): CommandDeps & { errors: str
     errors,
     readStdin: async () => '',
     runner: () => 'eslint',
-    run: () => ({ stdout: '[]', status: 0, failed: false }),
+    run: () => ({ stdout: '[]', stderr: '', status: 0, failed: false }),
     writeFile: () => {},
     writeError: (message: string) => errors.push(message),
     ...overrides,
@@ -20,6 +20,7 @@ describe('run', () => {
     const d = deps({
       run: () => ({
         stdout: JSON.stringify([{ fatalErrorCount: 0, output: 'fixed\n' }]),
+        stderr: '',
         status: 0,
         failed: false,
       }),
@@ -38,7 +39,7 @@ describe('run', () => {
   })
 
   it('exits 1 and explains itself when the formatter fails', async () => {
-    const d = deps({ run: () => ({ stdout: '', status: -1, failed: true }) })
+    const d = deps({ run: () => ({ stdout: '', stderr: '', status: -1, failed: true }) })
 
     expect(await run(['a.ts'], d)).toBe(1)
     expect(d.errors).toHaveLength(1)

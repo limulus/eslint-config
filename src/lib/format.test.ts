@@ -9,12 +9,17 @@ interface Invocation {
 
 /** Records what was spawned and replays canned results, keyed by the command. */
 const deps = (
-  results: Record<string, { stdout?: string; status: number; failed?: boolean }>,
+  results: Record<
+    string,
+    { stdout?: string; stderr?: string; status: number; failed?: boolean }
+  >,
   written: string[] = [],
-  calls: Invocation[] = []
-): FormatDeps & { written: string[]; calls: Invocation[] } => ({
+  calls: Invocation[] = [],
+  errors: string[] = []
+): FormatDeps & { written: string[]; calls: Invocation[]; errors: string[] } => ({
   written,
   calls,
+  errors,
   runner: () => 'eslint_d',
   run: (command, args) => {
     calls.push({ command, args })
@@ -22,12 +27,16 @@ const deps = (
     if (!result) throw new Error(`unexpected command: ${command}`)
     return {
       stdout: result.stdout ?? '',
+      stderr: result.stderr ?? '',
       status: result.status,
       failed: result.failed ?? false,
     }
   },
   writeFile: (file, contents) => {
     written.push(`${file}\n${contents}`)
+  },
+  writeError: (message) => {
+    errors.push(message)
   },
 })
 
@@ -122,6 +131,40 @@ describe('formatFile', () => {
 
     expect(result.outcome).toBe('formatted')
     expect(d.calls.map((call) => call.command)).toEqual(['eslint_d', 'prettier'])
+  })
+
+  it('says why it fell back, quoting the reason eslint gave', () => {
+    // The whole point of the fallback is that formatting still happens, which also means a
+    // consumer whose eslint config is broken outright gets silent prettier-only output forever.
+    // The reason lives in eslint's stderr, so that is what has to reach the user.
+    const d = deps({
+      eslint_d: {
+        status: 2,
+        stdout: 'Oops! Something went wrong :(',
+        stderr: "TypeError: Error while loading rule 'react/no-did-mount-set-state'\n",
+      },
+      prettier: { status: 0 },
+    })
+
+    formatFile('src/a.ts', d)
+
+    const reported = d.errors.join('')
+    expect(reported).toMatch(/eslint_d/)
+    expect(reported).toMatch(/prettier/)
+    expect(reported).toMatch(/Error while loading rule/)
+  })
+
+  it('stays silent on the parse-error fallback, which is a per-file expectation', () => {
+    // A .ts outside the tsconfig include is the documented case the fallback exists for. It is
+    // not a symptom of anything being wrong, so it must not print on every write.
+    const d = deps({
+      eslint_d: { status: 1, stdout: eslintJson({ fatalErrorCount: 1 }) },
+      prettier: { status: 0 },
+    })
+
+    formatFile('stray.ts', d)
+
+    expect(d.errors).toEqual([])
   })
 
   it('reports failure when eslint bails out and prettier cannot save it either', () => {

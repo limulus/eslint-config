@@ -49,6 +49,7 @@ export function runCommand(
 
   return {
     stdout: result.stdout ?? '',
+    stderr: result.stderr ?? '',
     status: result.status ?? -1,
     failed: Boolean(result.error) || result.status === null,
   }

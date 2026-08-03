@@ -19,20 +19,25 @@ const BIN = path.join(HERE, 'cli.ts')
  * undetected behind a green 100%-coverage suite: the bin swallowed it into a silent Prettier
  * pass. These tests spawn the real binary against a real ESLint.
  */
-const workDir = mkdtempSync(path.join(REPO, '.integration-'))
-symlinkSync(path.join(REPO, 'node_modules'), path.join(workDir, 'node_modules'), 'dir')
-writeFileSync(
-  path.join(workDir, 'eslint.config.js'),
+const makeProject = (eslintConfig: string): string => {
+  const dir = mkdtempSync(path.join(REPO, '.integration-'))
+  symlinkSync(path.join(REPO, 'node_modules'), path.join(dir, 'node_modules'), 'dir')
+  writeFileSync(path.join(dir, 'eslint.config.js'), eslintConfig)
+  writeFileSync(path.join(dir, '.prettierrc.json'), '"@limulus/eslint-config/prettier"\n')
+  return dir
+}
+
+const workDir = makeProject(
   "import config from '@limulus/eslint-config'\n\nexport default config\n"
 )
-writeFileSync(path.join(workDir, '.prettierrc.json'), '"@limulus/eslint-config/prettier"\n')
+const brokenDir = makeProject("throw new Error('plugin exploded after an upgrade')\n")
 
 afterAll(() => {
-  rmSync(workDir, { recursive: true, force: true })
+  for (const dir of [workDir, brokenDir]) rmSync(dir, { recursive: true, force: true })
 })
 
-const runBin = (target: string) =>
-  spawnSync(process.execPath, [BIN, target], { cwd: workDir, encoding: 'utf8' })
+const runBin = (target: string, cwd = workDir) =>
+  spawnSync(process.execPath, [BIN, target], { cwd, encoding: 'utf8' })
 
 describe('the eslint arm, end to end', () => {
   it('applies a lint fix that prettier alone could not make', () => {
@@ -48,6 +53,21 @@ describe('the eslint arm, end to end', () => {
     expect(readFileSync(target, 'utf8')).toBe(
       "import path from 'node:path'\n\nconst root = path.sep\nconsole.log(root)\n"
     )
+  })
+
+  it('formats but says so when the consumer eslint config is broken outright', () => {
+    // The failure this guards is degradation, not breakage: every file still comes out
+    // formatted and the hook still exits 0, so without the diagnostic a project can lose the
+    // entire lint half of the tool and never be told.
+    const target = path.join(brokenDir, 'app.js')
+    writeFileSync(target, "let root = 'x'\nconsole.log( root )\n")
+
+    const result = runBin(target, brokenDir)
+
+    expect(result.status).toBe(0)
+    expect(readFileSync(target, 'utf8')).toBe("let root = 'x'\nconsole.log(root)\n")
+    expect(result.stderr).toMatch(/could not lint/)
+    expect(result.stderr).toMatch(/plugin exploded after an upgrade/)
   })
 
   it('formats a file the eslint arm cannot parse via the prettier fallback', () => {
