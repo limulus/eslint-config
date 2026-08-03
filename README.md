@@ -50,6 +50,13 @@ pass. Everything else goes through Prettier directly. A file ESLint cannot parse
 `.ts` outside your `tsconfig.json` `include`, falls back to Prettier rather than being
 skipped.
 
+Run `limulus-format --help` for usage. Pass a path beginning with a dash after `--`.
+
+If ESLint cannot run at all — an `eslint.config.js` that throws, or a plugin incompatible
+with your installed ESLint — the file is still formatted with Prettier, and the reason
+ESLint gave is written to stderr. Exit status stays 0, because the file did get formatted,
+so watch stderr if lint fixes ever seem to stop being applied.
+
 Install [`eslint_d`](https://www.npmjs.com/package/eslint_d) to make it roughly ten times
 faster:
 
