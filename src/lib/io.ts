@@ -5,6 +5,9 @@ import path from 'node:path'
 
 import { type RunResult } from './format.ts'
 
+/** Ceiling on a formatter's captured output. Generous: it is a per-file report, not a stream. */
+const MAX_OUTPUT_BYTES = 64 * 1024 * 1024
+
 /**
  * The version of an installed package, or null when it cannot be resolved from `fromDir`.
  *
@@ -45,6 +48,10 @@ export function runCommand(
     cwd: fromDir,
     encoding: 'utf8',
     env: { ...process.env, PATH: [binDir, process.env.PATH].join(path.delimiter) },
+    // ESLint's JSON report embeds the entire fixed source, so it scales with the file being
+    // formatted. Node's 1 MiB default would turn a large file into ENOBUFS, which surfaces as
+    // `failed` and reads as "the binary would not run" — a false report of a real success.
+    maxBuffer: MAX_OUTPUT_BYTES,
   })
 
   return {

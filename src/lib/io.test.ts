@@ -41,9 +41,23 @@ describe('runCommand', () => {
   })
 
   it('captures stderr, which carries the reason a formatter bailed out', () => {
-    const result = runCommand('node', ['-e', 'process.stderr.write("why it broke")'], REPO_ROOT)
+    const result = runCommand(
+      'node',
+      ['-e', 'process.stderr.write("why it broke")'],
+      REPO_ROOT
+    )
 
     expect(result.stderr).toBe('why it broke')
+  })
+
+  it('captures output far past the 1 MiB default buffer', () => {
+    // ESLint's JSON report embeds the whole fixed source, so a large file overruns node's
+    // default and comes back as ENOBUFS -- indistinguishable from the binary never running.
+    const script = 'process.stdout.write("x".repeat(4 * 1024 * 1024))'
+    const result = runCommand('node', ['-e', script], REPO_ROOT)
+
+    expect(result.failed).toBe(false)
+    expect(result.stdout).toHaveLength(4 * 1024 * 1024)
   })
 
   it('marks a command that cannot be spawned as failed', () => {

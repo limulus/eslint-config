@@ -45,7 +45,10 @@ describe('the eslint arm, end to end', () => {
     // it proves ESLint actually linted rather than the fallback quietly taking over. The spacing
     // inside console.log is the Prettier half of the same pass.
     const target = path.join(workDir, 'app.js')
-    writeFileSync(target, "import path from 'node:path'\n\nlet root = path.sep\nconsole.log( root )\n")
+    writeFileSync(
+      target,
+      "import path from 'node:path'\n\nlet root = path.sep\nconsole.log( root )\n"
+    )
 
     const result = runBin(target)
 
