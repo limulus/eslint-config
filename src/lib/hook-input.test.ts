@@ -28,6 +28,12 @@ describe('parseInvocation', () => {
     expect(parseInvocation(['-h'])).toEqual({ kind: 'help' })
   })
 
+  it('rejects more than one file rather than silently dropping the rest', () => {
+    const invocation = parseInvocation(['a.ts', 'b.ts'])
+
+    expect(invocation.kind).toBe('error')
+  })
+
   it('rejects an unknown option instead of formatting a file named after it', () => {
     const invocation = parseInvocation(['--fix-everything', 'a.ts'])
 
@@ -61,6 +67,13 @@ describe('filePathFromHookPayload', () => {
 
   it('returns null for empty input', () => {
     expect(filePathFromHookPayload('')).toBeNull()
+  })
+
+  it('returns null for JSON that is not an object', () => {
+    // JSON.parse succeeds on these, so the try/catch never sees them.
+    expect(filePathFromHookPayload('null')).toBeNull()
+    expect(filePathFromHookPayload('42')).toBeNull()
+    expect(filePathFromHookPayload('"a string"')).toBeNull()
   })
 
   it('returns null for input that is not JSON', () => {

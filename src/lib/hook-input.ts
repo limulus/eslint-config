@@ -41,6 +41,13 @@ export function parseInvocation(argv: readonly string[]): Invocation {
 
     if (values.help) return { kind: 'help' }
 
+    // Refusing extra paths rather than formatting the first and dropping the rest in silence.
+    // One file per invocation is the hook's shape; anything else is a misunderstanding worth
+    // saying out loud.
+    if (positionals.length > 1) {
+      return { kind: 'error', message: 'expected one file, got ' + positionals.length }
+    }
+
     const [file] = positionals
     return file ? { kind: 'file', file } : { kind: 'stdin' }
   } catch (error) {
@@ -61,13 +68,18 @@ interface HookPayload {
 export function filePathFromHookPayload(raw: string): string | null {
   if (!raw.trim()) return null
 
-  let payload: HookPayload
+  let payload: unknown
   try {
-    payload = JSON.parse(raw) as HookPayload
+    payload = JSON.parse(raw)
   } catch {
     return null
   }
 
-  const filePath = payload.tool_input?.file_path
+  // `null` and bare scalars all parse successfully, so the shape has to be checked rather than
+  // assumed — reaching into them throws, and a hook crashing on a surprising payload is the
+  // worst available outcome.
+  if (typeof payload !== 'object' || payload === null) return null
+
+  const filePath = (payload as HookPayload).tool_input?.file_path
   return typeof filePath === 'string' && filePath ? filePath : null
 }

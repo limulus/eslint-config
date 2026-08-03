@@ -32,6 +32,17 @@ const excerpt = (text: string): string =>
     .join('\n')
 
 /**
+ * Why a formatter is unhappy, in the words it used.
+ *
+ * `status` is -1 when the process never started, so reporting it would be meaningless — and a
+ * bare exit code is nearly as unhelpful when the tool has already explained itself on stderr.
+ */
+const reasonFrom = (result: RunResult): string =>
+  result.failed
+    ? 'could not be spawned'
+    : excerpt(result.stderr) || `exited ${result.status}`
+
+/**
  * Lints a file if it is the sort of file ESLint handles, reporting rather than failing when
  * ESLint cannot run. Prettier is left to format it either way.
  */
@@ -43,12 +54,9 @@ function lint(file: string, deps: FormatDeps): void {
   // says nothing about formatting. Only a failure to run at all is worth a word.
   if (!result.failed && result.status !== ESLINT_COULD_NOT_RUN) return
 
-  const reason = result.failed
-    ? 'could not be spawned'
-    : excerpt(result.stderr) || `exited ${result.status}`
-
   deps.writeError(
-    `limulus-format: ${command} could not lint ${file}, so it was only formatted:\n${reason}\n`
+    `limulus-format: ${command} could not lint ${file}, so it was only formatted:\n` +
+      `${reasonFrom(result)}\n`
   )
 }
 
@@ -66,6 +74,6 @@ export function formatFile(file: string, deps: FormatDeps): FormatResult {
 
   const result = deps.run('prettier', ['--write', '--ignore-unknown', '--', file])
   return result.failed || result.status !== 0
-    ? { outcome: 'failed', message: `prettier exited ${result.status}` }
+    ? { outcome: 'failed', message: reasonFrom(result) }
     : { outcome: 'formatted' }
 }

@@ -1,19 +1,10 @@
-import { mkdtempSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-
-import { afterAll, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { installedVersion, readStream, runCommand } from './io.ts'
 
 const REPO_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
-const workDir = mkdtempSync(path.join(tmpdir(), 'limulus-io-'))
-
-afterAll(() => {
-  rmSync(workDir, { recursive: true, force: true })
-})
-
 describe('installedVersion', () => {
   it('resolves a package that is installed', () => {
     expect(installedVersion('eslint', REPO_ROOT)).toMatch(/^\d+\./)
@@ -60,6 +51,16 @@ describe('runCommand', () => {
     expect(result.stdout).toHaveLength(4 * 1024 * 1024)
   })
 
+  it('finds a binary hoisted to an ancestor, as in a workspace', () => {
+    // src/lib has no node_modules of its own; the binaries live at the repo root. npm puts every
+    // ancestor's .bin on PATH for lifecycle scripts, and a workspace package depends on that.
+    const nested = path.join(REPO_ROOT, 'src', 'lib')
+    const result = runCommand('prettier', ['--version'], nested)
+
+    expect(result.failed).toBe(false)
+    expect(result.stdout.trim()).toMatch(/^\d+\./)
+  })
+
   it('marks a command that cannot be spawned as failed', () => {
     expect(runCommand('definitely-not-a-real-binary', [], REPO_ROOT).failed).toBe(true)
   })
@@ -78,6 +79,29 @@ describe('readStream', () => {
     async function* chunks() {
       yield Buffer.from('{"a":')
       yield Buffer.from('1}')
+    }
+
+    expect(await readStream(chunks())).toBe('{"a":1}')
+  })
+
+  it('keeps a multi-byte character split across two chunks intact', async () => {
+    // stdin arrives in 64 KiB chunks with no regard for character boundaries. Decoding each
+    // chunk on its own turns the straddling character into replacement bytes, which for a hook
+    // payload means formatting a path that does not exist.
+    const full = Buffer.from('{"file_path":"/tmp/ééé.md"}', 'utf8')
+    const cut = 20
+    async function* split() {
+      yield full.subarray(0, cut)
+      yield full.subarray(cut)
+    }
+
+    expect(await readStream(split())).toBe(full.toString('utf8'))
+  })
+
+  it('accepts string chunks too, as a stream with an encoding set yields', async () => {
+    async function* chunks() {
+      yield '{"a":'
+      yield '1}'
     }
 
     expect(await readStream(chunks())).toBe('{"a":1}')

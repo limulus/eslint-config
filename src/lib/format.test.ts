@@ -119,12 +119,27 @@ describe('formatFile', () => {
   })
 
   it('fails only when prettier itself fails, since that means nothing was formatted', () => {
-    const d = deps({ eslint_d: { status: 0 }, prettier: { status: 2, failed: true } })
+    const d = deps({
+      eslint_d: { status: 0 },
+      prettier: { status: -1, failed: true },
+    })
 
     const result = formatFile('src/a.ts', d)
 
     expect(result.outcome).toBe('failed')
-    expect(failure(result).message).toMatch(/prettier/)
+    // Not "exited -1", which is what a process that never started reports.
+    expect(failure(result).message).toBe('could not be spawned')
+  })
+
+  it('quotes what prettier said rather than just its exit code', () => {
+    const d = deps({
+      prettier: {
+        status: 2,
+        stderr: '[error] notes.md: SyntaxError: Unexpected token (2:1)',
+      },
+    })
+
+    expect(failure(formatFile('notes.md', d)).message).toMatch(/SyntaxError/)
   })
 
   it('fails when prettier reports a non-zero status', () => {

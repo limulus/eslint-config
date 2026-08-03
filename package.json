@@ -17,7 +17,8 @@
     },
     "./prettier": {
       "import": "./prettier.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "bin": {
     "limulus-format": "./dist/bin/cli.js"

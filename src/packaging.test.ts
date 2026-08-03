@@ -3,7 +3,6 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -17,7 +16,7 @@ interface PackReport {
 
 interface Manifest {
   bin: Record<string, string>
-  exports: Record<string, { import: string }>
+  exports: Record<string, string | { import: string }>
 }
 
 // Drop inherited npm_* vars so a parent npm invocation can't alter the spawned npm.
@@ -40,10 +39,11 @@ beforeAll(() => {
   expect(pack.error).toBeUndefined()
   expect(pack.status).toBe(0)
 
-  // Lifecycle output can precede the JSON despite --foreground-scripts=false
-  const report = (
-    JSON.parse(pack.stdout.slice(pack.stdout.indexOf('['))) as PackReport[]
-  )[0]
+  // Lifecycle output can precede the JSON despite --foreground-scripts=false. Anchor on an
+  // array that opens a line, so a warning containing a bracket cannot start the slice mid-noise.
+  const start = pack.stdout.search(/^\[/m)
+  expect(start).toBeGreaterThanOrEqual(0)
+  const report = (JSON.parse(pack.stdout.slice(start)) as PackReport[])[0]
   paths = report.files.map((file) => file.path)
   manifest = JSON.parse(
     readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
@@ -64,8 +64,10 @@ describe('the published tarball', () => {
     for (const target of Object.values(manifest.bin)) {
       expect(paths).toContain(target.replace(/^\.\//, ''))
     }
+    // Conditions may be spelled as an object or, for a plain passthrough, a bare string.
     for (const target of Object.values(manifest.exports)) {
-      expect(paths).toContain(target.import.replace(/^\.\//, ''))
+      const file = typeof target === 'string' ? target : target.import
+      expect(paths).toContain(file.replace(/^\.\//, ''))
     }
   })
 
