@@ -3,7 +3,6 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-
 import { afterAll, describe, expect, it } from 'vitest'
 
 // cli.ts is excluded from coverage as a process entry point, so it is proven by spawning it

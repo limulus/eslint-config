@@ -1,7 +1,6 @@
+import { ESLint, type Linter } from 'eslint'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-
-import { ESLint, type Linter } from 'eslint'
 
 import config from '../index.js'
 

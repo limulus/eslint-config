@@ -37,13 +37,14 @@
     "clean": "del-cli *.tsbuildinfo coverage dist",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "lint": "eslint .",
     "prebuild": "npm run clean",
     "prepack": "npm run build",
     "prepare": "husky",
     "test": "vitest run --coverage",
     "test:pack": "vitest run -c vitest.pack.config.ts",
     "tscc": "tsc --noEmit",
-    "verify": "npm run format:check && npm run test && npm run tscc"
+    "verify": "npm run format:check && npm run lint && npm run test && npm run tscc"
   },
   "publishConfig": {
     "access": "public"

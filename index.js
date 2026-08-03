@@ -1,11 +1,10 @@
-import { createRequire } from 'node:module'
-import path from 'node:path'
-
 import { SourceCode } from 'eslint'
+import { defineConfig } from 'eslint/config'
 import typescriptAnalysisConfig from 'eslint-config-universe/flat/shared/typescript-analysis.js'
 import webConfig from 'eslint-config-universe/flat/web.js'
-import { defineConfig } from 'eslint/config'
 import globals from 'globals'
+import { createRequire } from 'node:module'
+import path from 'node:path'
 
 // TEMPORARY: delete once eslint-plugin-import ships a release newer than 2.32.0.
 //

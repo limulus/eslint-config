@@ -7,7 +7,6 @@
     "erasableSyntaxOnly": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "importHelpers": true,
     "isolatedModules": true,
     "module": "NodeNext",
     "moduleResolution": "nodenext",

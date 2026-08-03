@@ -1,6 +1,5 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-
 import prettier from 'prettier'
 import { describe, expect, it } from 'vitest'
 
