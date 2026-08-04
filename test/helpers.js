@@ -10,13 +10,10 @@ function createESLint(overrides = []) {
   return new ESLint({
     cwd: __dirname,
     overrideConfigFile: true,
-    overrideConfig: [
-      ...config,
-      // universe sets `react: { version: 'detect' }`, which warns on every run because React is
-      // not a dependency here. Pinning a version keeps the output clean.
-      { settings: { react: { version: '19.0' } } },
-      ...overrides,
-    ],
+    // Deliberately no `settings.react.version` override. Pinning one here would mask the
+    // detection crash the config has to handle itself — see the regression test in
+    // config.test.js. Tests must lint the config exactly as consumers receive it.
+    overrideConfig: [...config, ...overrides],
   })
 }
 
