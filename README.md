@@ -33,5 +33,11 @@ module.exports = {
 }
 ```
 
+Formatting is checked by ESLint itself: `prettier/prettier` reports as a warning, so
+`eslint --fix` formats and `eslint --max-warnings 0` fails on unformatted code. This package
+enables that rule and depends on `eslint-plugin-prettier` and `eslint-config-prettier`
+directly, rather than inheriting them from eslint-config-universe, which turned the rule off
+in 16.1.0.
+
 Markdown prose is hard-wrapped at 92 columns. This is scoped to Markdown, so YAML is left
 alone.

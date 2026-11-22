@@ -40,5 +40,8 @@ conventional commit format as enforced by commitlint.
 ## Key Dependencies
 
 - `eslint-config-universe` - Base ESLint configuration (v15+ for flat config support)
+- `eslint-plugin-prettier`, `eslint-config-prettier` - Declared here, not inherited from
+  universe, because `index.js` enables `prettier/prettier` itself (universe 16.1.0 turned it
+  off). Ranges match universe's so installs dedupe to one copy
 - `globals` - Global variables for different environments
 - Requires peer dependencies: eslint >=9, prettier >=3, typescript >=5

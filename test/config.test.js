@@ -1,7 +1,8 @@
 const assert = require('node:assert/strict')
+const path = require('node:path')
 const { describe, it } = require('node:test')
 
-const { FIXTURES_DIR, lintFixture } = require('./helpers.js')
+const { FIXTURES_DIR, createESLint, lintFixture } = require('./helpers.js')
 
 describe('lint behavior', () => {
   it('lints without the consumer supplying a react version', async () => {
@@ -17,6 +18,19 @@ describe('lint behavior', () => {
 
     assert.ok(reported.has('no-nested-ternary'), 'expected no-nested-ternary to report')
     assert.ok(reported.has('no-void'), 'expected no-void to report')
+  })
+
+  it('reports misformatted code as a prettier/prettier warning', async () => {
+    // universe 16.1.0 switched `prettier/prettier` off while still registering the plugin, so
+    // consumers silently lost formatting checks and `eslint --fix` stopped formatting. The
+    // config has to enable the rule itself rather than inherit universe's setting.
+    const [result] = await createESLint().lintFiles([
+      path.join(FIXTURES_DIR, 'misformatted.js'),
+    ])
+    const message = result.messages.find(({ ruleId }) => ruleId === 'prettier/prettier')
+
+    assert.ok(message, 'expected prettier/prettier to report')
+    assert.equal(message.severity, 1, 'expected prettier/prettier to report as a warning')
   })
 
   it('reports the React Compiler rules from eslint-plugin-react-hooks', async () => {

@@ -3,6 +3,7 @@ const path = require('node:path')
 
 const { SourceCode } = require('eslint')
 const { defineConfig } = require('eslint/config')
+const prettierRecommended = require('eslint-plugin-prettier/recommended')
 const globals = require('globals')
 const webConfig = require('eslint-config-universe/flat/web')
 const typescriptAnalysisConfig = require('eslint-config-universe/flat/shared/typescript-analysis')
@@ -48,6 +49,18 @@ const reactVersion = (() => {
   }
 })()
 
+// universe 16.1.0 switched `prettier/prettier` to 'off' because Expo's own repository moved to
+// another formatter. It still registers the plugin today, but formatting is this package's
+// promise rather than Expo's, so the plugin, the eslint-config-prettier rule resets and the rule
+// setting are all supplied here instead of inherited.
+//
+// ESLint refuses to merge two different objects under one plugin name ("Cannot redefine
+// plugin"), and nothing guarantees a consumer's install dedupes our eslint-plugin-prettier with
+// universe's. So when universe has registered an instance, that same object is reused.
+const prettierPlugin =
+  webConfig.find((entry) => entry.plugins?.prettier)?.plugins.prettier ??
+  prettierRecommended.plugins.prettier
+
 module.exports = defineConfig([
   ...webConfig,
   ...typescriptAnalysisConfig,
@@ -63,6 +76,16 @@ module.exports = defineConfig([
     rules: {
       'no-nested-ternary': 'error',
       'no-void': ['warn', { allowAsStatement: true }],
+    },
+  },
+  // Last, so that 'warn' wins over universe's 'off' and the eslint-config-prettier resets win
+  // over every rule above.
+  {
+    name: '@limulus/eslint-config/prettier',
+    plugins: { prettier: prettierPlugin },
+    rules: {
+      ...prettierRecommended.rules,
+      'prettier/prettier': 'warn',
     },
   },
 ])

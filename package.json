@@ -22,7 +22,9 @@
     "access": "public"
   },
   "dependencies": {
+    "eslint-config-prettier": "^9.1.0",
     "eslint-config-universe": "^16.0.0",
+    "eslint-plugin-prettier": "^5.2.6",
     "globals": "^17.9.0"
   },
   "peerDependencies": {
